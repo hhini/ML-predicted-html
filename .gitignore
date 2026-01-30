@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Streamlit
+.streamlit/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+
+# Large/Generated files (Optional, uncomment if you don't want to commit models)
+# *.pkl
+# *.joblib
