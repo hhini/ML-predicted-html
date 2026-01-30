@@ -18,14 +18,19 @@ except Exception as e:
 
 # --- UI 美化函数 ---
 def load_assets():
+    # 获取当前脚本的绝对路径目录 (app/)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # 获取项目根目录 (app/ 的上一级)
+    project_root = os.path.dirname(current_dir)
+    
     # 1. 加载 CSS
-    css_path = os.path.join("assets", "style.css")
+    css_path = os.path.join(project_root, "assets", "style.css")
     if os.path.exists(css_path):
         with open(css_path, "r", encoding='utf-8') as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     
     # 2. 侧边栏 Logo (如果有)
-    logo_path = os.path.join("assets", "logo.png")
+    logo_path = os.path.join(project_root, "assets", "logo.png")
     if os.path.exists(logo_path):
         st.sidebar.image(logo_path, use_container_width=True)
 
