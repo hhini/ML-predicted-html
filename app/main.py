@@ -32,7 +32,18 @@ def load_assets():
     # 2. 侧边栏 Logo (如果有)
     logo_path = os.path.join(project_root, "assets", "logo.png")
     if os.path.exists(logo_path):
-        st.sidebar.image(logo_path, use_container_width=True)
+        try:
+            # 尝试使用 use_container_width (新版)
+            st.sidebar.image(logo_path, use_container_width=True)
+        except TypeError:
+            try:
+                # 回退到 use_column_width (旧版)
+                st.sidebar.image(logo_path, use_column_width=True)
+            except:
+                # 如果都失败，不使用宽度参数
+                st.sidebar.image(logo_path)
+        except Exception as e:
+            print(f"Error loading logo: {e}")
 
 # --- 新增 import ---
 from ui.upload_view import render_upload_view 
