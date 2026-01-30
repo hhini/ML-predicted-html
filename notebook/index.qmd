@@ -1,0 +1,297 @@
+---
+title: notebook
+authors:
+  - name: Norah Jones
+    affiliation: The University
+    roles: writing
+    corresponding: true
+bibliography: references.bib
+---
+
+## Section
+
+---
+### 第一个问题：创建文件的时候无法运行python文件
+
+使用的是 VS Code 的 "Code Runner" 插件（右上角的运行按钮通常是这个插件）：
+
+
+1. 它默认直接调用 python 命令。如果你的系统里 python 命令不可用，它就会报错。
+
+2. 建议使用 VS Code 官方 Python 插件运行 ：
+  - 打开 setup_project.py 文件。
+  - 点击右上角的 运行按钮旁边的下拉箭头 ，选择 "Run Python File" （这是官方插件，通常能自动识别正确的 Python 路径）。
+  - 或者直接按 F5 调试运行。  
+
+
+---
+
+### 在requirements.txt添加需要的库
+
+**我们需要告诉 Python 这个项目需要用到 streamlit。**
+打开刚才自动生成的 requirements.txt 文件。
+输入以下内容并保存：
+
+```
+streamlit==1.31.0
+pandas
+numpy
+scikit-learn
+xgboost
+plotly
+matplotlib
+seaborn
+scipy
+statsmodels
+```
+
+---
+
+### 第二个问题：运行app/main.py文件报错
+
+原因在于不能直接用python main.py运行，需要用streamlit run main.py
+
+在终端输入以下命令：
+
+```Bash
+streamlit run app/main.py
+```
+预期结果：
+
+终端会显示 You can now view your Streamlit app in your browser.
+你的浏览器应该会自动弹出一个新窗口（通常是 http://localhost:8501）。
+你应该能看到一个带有侧边栏的网页，标题是“AI Insight Studio”。尝试点击侧边栏的选项，右边的文字会跟着变。
+
+---
+
+### 关于docker
+
+如果现状：
+你在自己电脑上配置了 Python，装了 pandas，跑起来了。
+
+痛点：
+如果我想看你的网页，我把你的代码拷到我电脑上，但我没装 pandas，或者我装的 Python 版本跟你的不一样，代码就报错了。
+
+Docker 的作用：
+Docker 就像一个 **“自带厨房的快餐盒”**。
+我们写一个清单（Dockerfile），告诉电脑：
+
+1. 我们要用 Python 3.9（准备锅具）。
+2. 我们要装 streamlit 和 pandas（准备食材）。
+3. 我们要运行 main.py（开始烹饪）。
+
+  - Docker 会把这一切打包成一个镜像 (Image)。
+  - 把这个镜像发给我，我只要装了 Docker，不需要配 Python 环境，直接就能跑，而且效果和你电脑上一模一样。
+
+如果电脑上 Docker Desktop 已经装好并启动了（看到鲸鱼图标），我们可以试着写一下 Dockerfile。
+
+---
+
+# 数据接入模块
+
+## 三步走
+
+1. Service 层：写处理数据的逻辑（只管读取，不管界面）。
+2. UI 层：写上传按钮和页面展示（只管界面，不管逻辑）。
+3. Main 入口：把它们串起来。
+
+## 编写业务逻辑
+
+打开 app/services/data_processor.py，
+编写数据处理逻辑。
+
+* 我们定义了一个类 DataProcessor。
+* load_data 函数专门用来根据文件后缀（csv 还是 excel）调用 pandas 读取数据。
+注意：这里没有任何 st.write 或 st.title，因为业务逻辑层不应该知道“界面”长什么样。这就是解耦。
+
+什么是解耦？
+
+* 解耦是指将系统的不同部分（如 UI 和业务逻辑）分离开来，使它们可以独立变化而不影响对方。
+* 在我们的例子中，Service 层负责数据处理，UI 层负责界面展示，两者互不干扰。
+
+如果你把所有代码（界面、数据处理、计算逻辑）都写在一个文件里（比如全塞进 main.py ），这就是 高耦合 。
+它的坏处是：
+
+1. 改一处，挂一片 ：你想改个按钮颜色，结果不小心把数据计算逻辑删了一行，整个程序崩了。
+2. 没法复用 ：你写了一个超棒的数据清洗函数，但它和界面代码混在一起，别的项目想用根本用不了。
+3. 难以测试 ：你想测测算得对不对，但必须得启动整个界面手动点点点才能测。
+
+### 怎么解耦？（结合你的项目）
+你的项目结构设计其实已经在做解耦了：
+
+```
+app/
+├── main.py            <-- 入口 (只
+负责把大家叫来一起工作)
+├── ui/                <-- 界面层 
+(只负责画图、显示按钮)
+├── services/          <-- 业务逻辑
+层 (只负责算数、处理数据)
+├── models/            <-- 数据模型 
+(只负责定义数据长啥样)
+└── utils/             <-- 工具箱 
+(谁都能用的通用工具)
+```
+具体的例子：
+
+场景 ：用户点击“预测”按钮，系统计算结果并显示。
+
+## 编写界面组件 (UI 层)
+
+现在我们写界面。请打开 app/ui/upload_view.py，
+
+
+* st.session_state (非常重要)：这就像浏览器的“短期记忆”。如果你不把 df 存进去，当你点击别的按钮时，Streamlit 会刷新页面，刚才上传的数据就“丢”了。
+* st.metric：这是专门用来展示关键指标（KPI）的组件，做仪表盘很好看。
+
+## 编写 Main 入口 (Main 层)
+
+最后，我们要修改 app/main.py，让它调用刚才写好的 UI 模块。
+打开 app/main.py，找到下面这行代码：
+
+```python
+if mode == "数据上传":
+    st.info("请上传您的 CSV 或 Excel 数据文件（功能开发中...）")
+```    
+替换为（注意头部要添加 import）
+
+## 验证成果
+
+* 保存所有文件。
+
+* 确保终端里的 Streamlit 还在运行（如果刚才关了，就重新输入 streamlit run app/main.py）。
+* 刷新浏览器页面。
+
+测试流程：
+1. 随便找一个 CSV 文件（比如你以前做医学分析的数据集）。
+2. 点击“上传”。
+3. 看是否显示了“样本量”、“特征数”等指标。
+4. 看是否显示了表格。
+5. 关键测试：点击左侧侧边栏的“数据分析 (EDA)”，看看是否能显示数据的 describe() 统计信息？如果能，说明 session_state 起作用了，数据被成功“记住”了
+
+
+# 自动化数据探索（EDA）与可视化
+
+## 四步走
+ 
+1. 全局概览 & 类型定义 (The "Setup")：用户在这里手动修正机器识别的类型。
+2. 单变量深度分析 (Univariate)：看分布、偏度、峰度、异常值 (IQR)。
+3. 多变量与相关性 (Multivariate)：热力图、共线性检测。
+4. 缺失值侦探 (Missing Values)：专门分析缺失模式。
+
+## 升级服务层（Service 层）
+
+需要增加计算偏度、峰度、IQR异常值以及缺失值相关性的逻辑。
+
+app/services/eda_service.py
+
+## 升级 UI 层（UI 层）
+
+需要增加显示偏度、峰度、IQR异常值以及缺失值相关性的组件。
+
+app/ui/eda_view.py
+
+进入 “数据分析 (EDA)” 页面，你会看到四个漂亮的选项卡 (Tabs)：
+1. 📋 概览 & 类型定义：
+在这里把一些 ID 列改成 Categorical，把一些错误的数值修正。
+2. 📊 单变量深度分析：
+* 选择一个连续变量（如“Age”）：看直方图和箱线图。重点看箱线图外的点（IQR 异常值）。
+* 选择一个分类变量（如“Gender”）：看条形图。
+* 左侧指标栏：注意看 Skewness (偏度)。如果偏度 > 1，心里要记下来：“下一步特征工程时，可能需要对这个特征做 Log 或 Box-Cox 变换”。
+3. 🔗 相关性分析：
+看红蓝热力图。如果有两个特征颜色特别深（比如 0.9），说明存在多重共线性。心里记下来：“建模前可能要删掉其中一个”。
+4. 🧩 缺失值专题：
+如果你的数据比较完美，这里会显示绿色对勾。
+如果是真实医学数据，通常会有缺失。这里的热力图能告诉你：“是否某些检查项目是成套缺失的？”
+
+----
+
+# 数据科学工程能力
+
+## Service 层
+
+文件app/services/feature_eng_service.py
+
+## UI 层
+
+文件app/ui/feature_eng_view.py
+
+## 集成层
+
+文件app/main.py
+
+现在你可以像操作精密仪器一样处理数据了：
+
+1. 处理缺失值 (The Cleaning Room)：
+
+  - 上传一个有缺失的数据集。
+  - 进入 Feature Engineering -> Tab 1。
+  - 你会看到系统推荐你用 MICE 或 KNN。
+  - 试一试：选中一个缺失的数值列，选择 MICE (多重插补)，点击开始。这背后的逻辑是：它训练了一个线性回归模型，用其他列来预测这个空缺值，这比单纯填平均值要科学得多。
+2. 正态化变换 (The Transformation Lab)：
+
+  - 切换到 Tab 2。
+  - 选择一个偏度很大（Skew > 1）的特征（例如 Income 或 BloodPressure）。
+  - 左边的图会显示它很难看（长尾分布）。
+  - 选择 非线性变换 -> Yeo-Johnson（比 Box-Cox 更强，支持负数）。
+  - 点击“应用预览”。
+  - 见证奇迹：右边的图通常会瞬间变成漂亮的“钟形曲线”（正态分布）。这时候，你可以自信地点击“保存”，因为接下来的线性模型会非常喜欢这个新特征。
+
+
+# 特征选择
+
+1. 严谨的数据划分：先锁定 Test Set，保证它是纯洁的。
+2. 特征候选池 (Candidate Pool)：用户可以运行 Filter、Embedded、Wrapper 三种方法，每种方法都会推荐一份名单。
+3. 决策台 (Final Decision)：用户可以看到不同方法的推荐（例如：特征A被 Lasso 和 RF 同时选中，说明很重要），然后手动或自动决定最终保留哪些特征。
+
+## server 层
+
+(app/services/feature_selection_service.py)
+这个服务类不仅要封装算法，还要处理分层抽样和置换重要性。
+
+## UI 层
+
+ (app/ui/feature_selection_view.py)
+这里的 UI 设计逻辑是：
+* Tab 1 (Setup): 必须先点“数据划分”，锁定 Train/Test，防止数据泄露。
+* Tab 2 (Candidates): 用户运行不同算法，系统把推荐的特征存入“候选池”。
+* Tab 3 (Decision): 展示一个交集视图（Venn Diagram 概念），用户勾选最终名单。
+
+# autoML竞技场
+
+## 第一步：Service 层 (app/services/model_service.py)
+
+这个类将极其庞大，它集成了：
+
+1. 7种模型的定义（包含 Pipeline 自动缩放）。
+2. Optuna 贝叶斯调参。
+3. K-Fold 交叉验证与指标收集（为了画 CI 阴影线，必须收集每一折的预测结果）。
+
+## Ui 层 (app/ui/model_view.py)
+
+
+# 模型解释性 (XAI)
+
+
+1. 黑盒开启 (Opening the Black Box)：使用 SHAP (SHapley Additive exPlanations)——这是目前诺贝尔奖级博弈论在机器学习中应用的金标准。
+   * 全局解释：哪些特征总体上最重要？（Beeswarm Plot）
+   * 局部解释：针对某一个特定病人/客户，通过瀑布图 (Waterfall Plot) 告诉医生：“虽然他年轻，但因为血压极高 + 胆固醇异常，所以预测高风险”。
+   * 依赖分析：揭示特征与结果的非线性关系（Dependence Plot）。
+2. 全局解释：哪些特征总体上最重要？（Beeswarm Plot）
+3. 局部解释：针对某一个特定病人/客户，通过瀑布图 (Waterfall Plot) 告诉医生：“虽然他年轻，但因为血压极高 + 胆固醇异常，所以预测高风险”。
+4. 依赖分析：揭示特征与结果的非线性关系（Dependence Plot）。
+终极考试 (The Final Exam)：解锁被我们冻结的测试集 (Test Set)，进行一次性验证，并计算泛化误差 (Generalization Error)，检测是否过拟合。
+模型封存与交付 (MLOps)：将预处理管道 (Pipeline) 和模型打包下载，生成可直接在生产环境运行的 Python 脚本。
+
+## server 层 (app/ui/explanation_service.py)
+
+这个服务类需要处理极其复杂的 SHAP 计算器选择逻辑（树模型用 TreeExplainer，线性模型/SVM 用 KernelExplainer）。
+
+## UI 层 (app/ui/prediction_view.py)
+
+这是整个项目的指挥舱。
+我们需要：
+1. 让用户从 Step 5 的排行榜中选一个**“冠军模型”**。
+2. 点击“解锁测试集”，展示最终成绩单。
+3. 点击“展示 SHAP 图表”，展示全局解释（Beeswarm Plot）。
+4. 提供下载按钮。
