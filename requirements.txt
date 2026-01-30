@@ -1,13 +1,15 @@
 streamlit==1.31.0
 pandas
 numpy
+openpyxl
 scikit-learn
 xgboost
+lightgbm
+optuna
+shap
 plotly
 matplotlib
 seaborn
 scipy
 statsmodels
-shap
 joblib
-matplotlib
